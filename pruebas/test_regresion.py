@@ -28,6 +28,7 @@ from regresion import (  # noqa: E402
     p_valor_f,
     p_valor_t,
     prueba_normalidad,
+    proceso_estimacion,
 )
 
 
@@ -101,6 +102,15 @@ class TestModelo(unittest.TestCase):
         self.assertIn("y =", texto)
         self.assertIn("x1", texto)
         self.assertIn("x2", texto)
+
+    def test_proceso_estimacion_reproduce_coeficientes(self):
+        modelo = ajustar_regresion(self.df, "y", ["x1", "x2", "x3"])
+        proceso = proceso_estimacion(modelo)
+        np.testing.assert_allclose(proceso["beta"], modelo["beta"], rtol=1e-8, atol=1e-8)
+        self.assertLess(proceso["error_maximo_verificacion"], 1e-8)
+        self.assertEqual(proceso["XtX"].shape, (4, 4))
+        self.assertEqual(proceso["Xty"].shape, (4,))
+        self.assertEqual(proceso["metodo_inversa"], "inversa")
 
 
 class TestPruebasDiagnosticas(unittest.TestCase):

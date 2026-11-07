@@ -95,22 +95,15 @@ Modelo-regresion-lineal/
 │   ├── main.py                 # Interfaz web Streamlit
 │   ├── regresion.py            # Carga, limpieza, MCO y pruebas estadísticas
 │   ├── graficos_regresion.py   # Gráficos del modelo
-│   ├── analisis_ejemplo.py     # Ejecución reproducible por consola
-│   ├── algoritmos.py           # Módulo de una práctica anterior (no usado por la interfaz)
-│   ├── grafo.py                # Módulo de una práctica anterior (no usado por la interfaz)
-│   ├── reportes.py             # Módulo de una práctica anterior (no usado por la interfaz)
-│   └── validaciones.py         # Módulo de una práctica anterior (no usado por la interfaz)
+│   └── analisis_ejemplo.py     # Ejecución reproducible por consola
 │
 ├── datos/
-│   ├── regresion.csv           # Datos de ejemplo para el modelo
-│   ├── vertices.csv            # Datos de la práctica anterior
-│   └── aristas.csv             # Datos de la práctica anterior
+│   └── regresion.csv           # Datos de ejemplo para el modelo
 │
 ├── resultados/                 # Reporte y gráficos generados por analisis_ejemplo.py
 │
 ├── pruebas/
-│   ├── test_regresion.py       # Pruebas unitarias del sistema de regresión
-│   └── test_algoritmos.py      # Pruebas de la práctica anterior
+│   └── test_regresion.py       # Pruebas unitarias del sistema de regresión
 │
 ├── requirements.txt
 ├── guia_practica_io_ii.md
@@ -186,6 +179,7 @@ mediante mínimos cuadrados ordinarios. La interfaz muestra:
 * Valor \(p\) bilateral.
 * Nivel de significancia (`***`, `**`, `*`, `ns`).
 * \(R^2\), \(R^2\) ajustado, estadístico \(F\), \(p\)-valor global, error estándar de la regresión y Durbin-Watson.
+* **Proceso de estimación paso a paso:** modelo propuesto, función objetivo, matriz de diseño \(\mathbf{X}\), vector \(\mathbf{Y}\), productos \(\mathbf{X}^T\mathbf{X}\) y \(\mathbf{X}^T\mathbf{Y}\), inversa de \(\mathbf{X}^T\mathbf{X}\), solución \(\hat{\beta}\), verificación de las ecuaciones normales, valores ajustados, residuos y ecuación final.
 
 ### 3. Validación del modelo
 

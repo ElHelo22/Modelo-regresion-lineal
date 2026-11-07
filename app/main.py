@@ -33,6 +33,7 @@ from regresion import (  # noqa: E402
     ejecutar_pruebas,
     leer_csv_desde_bytes,
     limpiar_datos,
+    proceso_estimacion,
 )
 from graficos_regresion import (  # noqa: E402
     figura_a_png,
@@ -151,6 +152,249 @@ def tabla_vif(vif: pd.DataFrame):
         "R² auxiliar": "{:,.4f}",
         "VIF": "{:,.3f}",
     })
+
+
+def mostrar_proceso_estimacion(modelo: dict) -> None:
+    """Explica y muestra los cálculos matriciales que producen la ecuación MCO."""
+    proceso = proceso_estimacion(modelo)
+    X = proceso["X"]
+    y = proceso["y"]
+    nombres = ["Intercepto", *modelo["independientes"]]
+    n, p = X.shape
+    vista = min(n, 8)
+
+    st.markdown("### Proceso de estimación por mínimos cuadrados ordinarios")
+    st.caption(
+        "El procedimiento siguiente muestra cómo se pasa del modelo propuesto "
+        "y de los datos observados a los coeficientes de la ecuación estimada."
+    )
+
+    st.markdown("**Paso 1 — Modelo propuesto**")
+    st.latex(r"Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \cdots + \beta_k X_{ik} + \varepsilon_i")
+    st.write(
+        f"Para este ajuste: n = {n} observaciones, k = {modelo['k']} variables "
+        f"independientes y p = k + 1 = {p} parámetros (incluyendo el intercepto)."
+    )
+
+    st.markdown("**Paso 2 — Función objetivo de MCO**")
+    st.write(
+        "MCO elige los coeficientes que minimizan la suma de residuos al cuadrado:"
+    )
+    st.latex(
+        r"SCR(\beta)=\sum_{i=1}^{n}"
+        r"\left(Y_i-\beta_0-\beta_1X_{i1}-\cdots-\beta_kX_{ik}\right)^2"
+    )
+    st.write(
+        "Al derivar respecto a cada coeficiente e igualar a cero se obtienen "
+        "las ecuaciones normales:"
+    )
+    st.latex(r"\mathbf{X}^{T}\mathbf{X}\,\hat{\beta}=\mathbf{X}^{T}\mathbf{Y}")
+
+    st.markdown("**Paso 3 — Matriz de diseño X y vector Y**")
+    st.write(
+        "Cada fila de X representa una observación. La primera columna es el "
+        "intercepto (todo 1) y las siguientes son las variables independientes."
+    )
+    indice_vista = [f"Obs {i}" for i in range(1, vista + 1)]
+    col_x, col_y = st.columns([4, 1])
+    with col_x:
+        st.caption(f"Matriz X: dimensiones {n} × {p}. Primeras {vista} filas.")
+        st.dataframe(
+            pd.DataFrame(X[:vista], index=indice_vista, columns=nombres)
+            .style.format("{:,.4f}"),
+            width="stretch",
+        )
+    with col_y:
+        st.caption(f"Vector Y: dimensiones {n} × 1.")
+        st.dataframe(
+            pd.DataFrame(y[:vista], index=indice_vista, columns=[modelo["dependiente"]])
+            .style.format("{:,.4f}"),
+            width="stretch",
+        )
+
+    st.markdown("**Paso 4 — Productos XᵀX y XᵀY**")
+    col_xtx, col_xty = st.columns([3, 1])
+    with col_xtx:
+        st.caption("Matriz XᵀX")
+        st.dataframe(
+            pd.DataFrame(proceso["XtX"], index=nombres, columns=nombres)
+            .style.format("{:,.4f}"),
+            width="stretch",
+        )
+    with col_xty:
+        st.caption("Vector XᵀY")
+        st.dataframe(
+            pd.DataFrame(proceso["Xty"], index=nombres, columns=["XᵀY"])
+            .style.format("{:,.4f}"),
+            width="stretch",
+        )
+
+    st.markdown("**Paso 5 — Inversa de XᵀX y solución de las ecuaciones normales**")
+    st.write(
+        f"La matriz XᵀX tiene rango {proceso['rango']}; se utiliza su "
+        f"{proceso['metodo_inversa']} para despejar los coeficientes:"
+    )
+    st.latex(r"\hat{\beta}=(\mathbf{X}^{T}\mathbf{X})^{-1}\mathbf{X}^{T}\mathbf{Y}")
+    st.caption("Matriz (XᵀX)⁻¹")
+    st.dataframe(
+        pd.DataFrame(proceso["XtX_inversa"], index=nombres, columns=nombres)
+        .style.format("{:,.6f}"),
+        width="stretch",
+    )
+
+    tabla_beta = pd.DataFrame({
+        "Variable": nombres,
+        "Coeficiente estimado": proceso["beta"],
+    })
+    st.caption("Resultado del producto (XᵀX)⁻¹XᵀY")
+    st.dataframe(
+        tabla_beta.style.format({"Coeficiente estimado": "{:,.6f}"}),
+        width="stretch",
+        hide_index=True,
+    )
+
+    st.markdown("**Paso 6 — Verificación de las ecuaciones normales**")
+    st.write(
+        "Comprobación numérica: el producto XᵀX·β̂ debe coincidir con XᵀY."
+    )
+    verificacion = pd.DataFrame({
+        "Variable": nombres,
+        "XᵀX·β̂": proceso["XtX"] @ proceso["beta"],
+        "XᵀY": proceso["Xty"],
+        "Diferencia": proceso["verificacion"],
+    })
+    st.dataframe(
+        verificacion.style.format({
+            "XᵀX·β̂": "{:,.6f}",
+            "XᵀY": "{:,.6f}",
+            "Diferencia": "{:.2e}",
+        }),
+        width="stretch",
+        hide_index=True,
+    )
+    st.caption(
+        f"Error máximo absoluto de la verificación: "
+        f"{proceso['error_maximo_verificacion']:.2e}"
+    )
+
+    st.markdown("**Paso 7 — Valores ajustados y residuos**")
+    st.latex(r"\hat{Y}=\mathbf{X}\hat{\beta}, \qquad e=Y-\hat{Y}")
+    tabla_residuos = pd.DataFrame({
+        "Observación": np.arange(1, vista + 1),
+        "Y observado": y[:vista],
+        "Ŷ ajustado": proceso["ajustados"][:vista],
+        "Residuo e": proceso["residuos"][:vista],
+    })
+    st.dataframe(
+        tabla_residuos.style.format({
+            "Y observado": "{:,.4f}",
+            "Ŷ ajustado": "{:,.4f}",
+            "Residuo e": "{:,.4f}",
+        }),
+        width="stretch",
+        hide_index=True,
+    )
+    st.caption(
+        f"Suma de cuadrados de residuos (SCR) = {modelo['sse']:,.4f}; "
+        f"suma de cuadrados total (SCT) = {modelo['sst']:,.4f}; "
+        f"R² = 1 − SCR/SCT = {modelo['r2']:.4f}."
+    )
+
+    st.markdown("**Paso 8 — Varianza estimada de los errores**")
+    st.write(
+        "Se calcula como el producto interno del vector de residuos consigo "
+        "mismo, dividido por los grados de libertad residuales:"
+    )
+    st.latex(
+        r"\widehat{\sigma}^{2}="
+        r"\frac{\hat{\mathbf{u}}^{T}\hat{\mathbf{u}}}{n-p}="
+        r"\frac{\sum_{i=1}^{n}\hat{u}_{i}^{2}}{n-p}"
+    )
+    st.caption(
+        f"Aquí n = {modelo['n']}, k = {modelo['k']} variables independientes, "
+        f"y p = k + 1 = {modelo['p']} parámetros estimados (incluido el intercepto). "
+        f"Por tanto, n − p = n − k − 1 = {modelo['gl_residual']} grados de libertad. "
+        "Si en la notación de su curso k representa todos los parámetros, incluido "
+        "el intercepto, esta misma expresión se escribe n − k."
+    )
+    sse_residuos = float(proceso["residuos"] @ proceso["residuos"])
+    varianza_estimada = sse_residuos / modelo["gl_residual"]
+    st.code(
+        f"u_hatᵀ u_hat = {sse_residuos:,.6f}\n"
+        f"n − p = {modelo['n']} − {modelo['p']} = {modelo['gl_residual']}\n"
+        f"sigma_hat² = {sse_residuos:,.6f} / {modelo['gl_residual']} "
+        f"= {varianza_estimada:,.6f}",
+        language="text",
+    )
+
+    st.markdown("**Paso 9 — Matriz de varianzas y covarianzas de los coeficientes**")
+    st.write(
+        "La matriz de varianzas-covarianzas de β̂ se obtiene multiplicando la "
+        "varianza estimada del error por la inversa de XᵀX:"
+    )
+    st.latex(
+        r"\widehat{\mathrm{Var}}(\hat{\boldsymbol{\beta}})="
+        r"\widehat{\sigma}^{2}(\mathbf{X}^{T}\mathbf{X})^{-1}"
+    )
+    matriz_covarianza = varianza_estimada * proceso["XtX_inversa"]
+    st.dataframe(
+        pd.DataFrame(matriz_covarianza, index=nombres, columns=nombres)
+        .style.format("{:,.6f}"),
+        width="stretch",
+    )
+    st.caption(
+        "Los elementos de la diagonal son las varianzas estimadas de cada "
+        "coeficiente; los elementos fuera de la diagonal son covarianzas."
+    )
+
+    st.markdown("**Paso 10 — Desviaciones estándar y estadísticos t de Student**")
+    st.write(
+        "La desviación estándar de cada coeficiente es la raíz cuadrada del "
+        "elemento correspondiente de la diagonal de la matriz anterior. "
+        "Luego, el estadístico t contrasta H₀: βⱼ = 0."
+    )
+    st.latex(
+        r"SE(\hat{\beta}_{j})="
+        r"\sqrt{\widehat{\mathrm{Var}}(\hat{\boldsymbol{\beta}})_{jj}},"
+        r"\qquad t_{j}=\frac{\hat{\beta}_{j}}{SE(\hat{\beta}_{j})}"
+    )
+    errores_estandar = np.sqrt(np.maximum(np.diag(matriz_covarianza), 0.0))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        t_calculados = proceso["beta"] / errores_estandar
+    tabla_inferencia = pd.DataFrame({
+        "Variable / coeficiente": nombres,
+        "β̂ (coeficiente)": proceso["beta"],
+        "Varianza (diagonal)": np.diag(matriz_covarianza),
+        "Desviación estándar": errores_estandar,
+        "Cálculo de t = β̂ / SE": [
+            f"{beta:,.6f} / {se:,.6f}"
+            for beta, se in zip(proceso["beta"], errores_estandar)
+        ],
+        "t de Student": t_calculados,
+    })
+    st.caption(
+        f"Variable dependiente: {modelo['dependiente']}. Las filas corresponden "
+        "al intercepto (β̂₀) y a cada variable independiente."
+    )
+    st.dataframe(
+        tabla_inferencia.style.format({
+            "β̂ (coeficiente)": "{:,.6f}",
+            "Varianza (diagonal)": "{:,.6f}",
+            "Desviación estándar": "{:,.6f}",
+            "t de Student": "{:,.6f}",
+        }),
+        width="stretch",
+        hide_index=True,
+    )
+    st.caption(
+        f"Los t se comparan con una distribución t de Student con "
+        f"{modelo['gl_residual']} grados de libertad residuales. "
+        "La tabla de coeficientes que sigue incluye también sus p-valores."
+    )
+
+    st.success("Ecuación estimada final")
+    st.code(ecuacion_modelo(modelo), language="text")
+
 
 
 def generar_reporte_texto(
@@ -573,6 +817,9 @@ elif menu.startswith("3"):
 
             st.subheader("Ecuación estimada")
             st.code(ecuacion_modelo(modelo), language="text")
+
+            with st.expander("Proceso de estimación: cómo se obtuvo la ecuación", expanded=True):
+                mostrar_proceso_estimacion(modelo)
 
             if modelo["advertencia"]:
                 st.warning(modelo["advertencia"])

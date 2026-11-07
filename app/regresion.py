@@ -518,6 +518,49 @@ def ecuacion_modelo(modelo: dict) -> str:
     return f"{modelo['dependiente']} = " + " ".join(terminos)
 
 
+def proceso_estimacion(modelo: dict) -> dict:
+    """
+    Calcula y expone los productos matriciales intermedios del MCO:
+
+        beta = (X'X)^(-1) X'Y
+
+    Se devuelven las matrices X'X, X'Y, la inversa (o pseudoinversa) y
+    los valores ajustados/residuos para mostrar el procedimiento en la
+    interfaz.
+    """
+    X = np.asarray(modelo["X"], dtype=float)
+    y = np.asarray(modelo["y"], dtype=float)
+    XtX = X.T @ X
+    Xty = X.T @ y
+    rango = int(np.linalg.matrix_rank(XtX))
+    if rango == XtX.shape[0]:
+        XtX_inversa = np.linalg.inv(XtX)
+        metodo_inversa = "inversa"
+    else:
+        XtX_inversa = np.linalg.pinv(XtX)
+        metodo_inversa = "pseudoinversa"
+
+    beta = XtX_inversa @ Xty
+    ajustados = X @ beta
+    residuos = y - ajustados
+    verificacion = XtX @ beta - Xty
+
+    return {
+        "X": X,
+        "y": y,
+        "XtX": XtX,
+        "Xty": Xty,
+        "XtX_inversa": XtX_inversa,
+        "beta": beta,
+        "ajustados": ajustados,
+        "residuos": residuos,
+        "verificacion": verificacion,
+        "error_maximo_verificacion": float(np.max(np.abs(verificacion))),
+        "metodo_inversa": metodo_inversa,
+        "rango": rango,
+    }
+
+
 # ======================================================================
 # Pruebas de validación
 # ======================================================================

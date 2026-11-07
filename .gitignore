@@ -9,6 +9,6 @@ dat/
 pruebas/__pycache__/
 app/__pycache__/
 
-venv/
+venv/*
 guia_practica_io_ii.md
 resultados/*
