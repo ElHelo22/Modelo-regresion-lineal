@@ -502,6 +502,17 @@ st.caption(
     "Investigación Operativa II"
 )
 
+with st.container():
+    st.markdown("### 👥 Integrantes del grupo")
+    st.markdown("""
+    * **Apaza Mamani Helmer Rudel**
+    * **Callizaya Lopez Naeli Daniela**
+    * **Chavez Mamani Joel Alexix**
+    * **Mamani Arias Karen Belen**
+    * **Mamani Quispe Miguel Angel**
+    * **Mendoza Paye Cristian Rodrigo**
+    """)
+
 df_base = datos_trabajo()
 
 # ----------------------------------------------------------------------
@@ -563,7 +574,7 @@ if st.session_state.modelo is not None:
         f"Y = {st.session_state.modelo['dependiente']}"
     )
 else:
-    st.sidebar.caption("Aún no hay un modelo estimado.")
+    st.sidebar.caption(".")
 
 
 # ----------------------------------------------------------------------

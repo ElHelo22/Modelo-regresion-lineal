@@ -8,14 +8,12 @@ La interfaz web está desarrollada con **Streamlit**, y el núcleo estadístico 
 
 ## 👥 Integrantes
 
-* **Apaza Casas Alexix Andrew**
 * **Apaza Mamani Helmer Rudel**
 * **Callizaya Lopez Naeli Daniela**
 * **Chavez Mamani Joel Alexix**
 * **Mamani Arias Karen Belen**
 * **Mamani Quispe Miguel Angel**
 * **Mendoza Paye Cristian Rodrigo**
-* **Quispe Quispe Hector**
 
 ---
 
